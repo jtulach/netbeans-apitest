@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
- * Copyright 1996-2009 Sun Microsystems, Inc.  All Rights Reserved.
+ * Copyright 1996-2021 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -358,4 +358,101 @@ public class Status
      * <font size=-1> Note: The assignment is historical and cannot easily be changed. </font>
      */
     public static final int[] exitCodes = { 95, 97, 98, 99 };
+
+    private static final String ENC_PREFFIX = "<EncodeD>";
+    /**
+     * Suffix signaling that string is encoded
+     */
+    private static final String ENC_SUFFFIX = "</EncodeD>";
+    /**
+     * Separator of encoded chars
+     */
+    private static final String ENC_SEPARATOR = " ";
+
+    /**
+     * Encodes strings containing non-ascii characters, where all characters
+     * are replaced with with their Unicode code. Encoded string will have
+     * the certain prefix and suffix to be distinguished from non-encode one.
+     * Strings of ASCII chars only are encoded into themselves.<br>
+     * Example:
+     * <pre>
+     * System.out.println(Status.encode("X \u01AB")); // Encoded 58 20 1AB
+     * System.out.println(Status.encode("Abc1")); // Abc1
+     * </pre>
+     *
+     * @param str - string to encode
+     * @return Encoded string or the same string if none non-ascii chars were found
+     * @see #decode(java.lang.String)
+     */
+    public static String encode(String str) {
+        if (str == null) {
+            return null;
+        }
+        boolean isAscii = true;
+        for (int i = 0; i < str.length(); i++) {
+            if (!isPrintable(str.charAt(i))) {
+                isAscii = false;
+                break;
+            }
+        }
+        if (isAscii) {
+            return str; // no need to decode;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(ENC_PREFFIX);
+        for (int i = 0; i < str.length(); i++) {
+            sb.append(encodeChar(str.charAt(i)));
+            sb.append(ENC_SEPARATOR);
+        }
+        sb.append(ENC_SUFFFIX);
+        return sb.toString();
+
+    }
+
+    /**
+     * Decodes string encoded by encode(String) method.
+     *
+     * @param str - string to decode
+     * @return Decoded string or the same string if encoded prefix/suffix
+     * were found
+     * @see #encode(java.lang.String)
+     */
+    public static String decode(String str) {
+        if (str == null) {
+            return null;
+        }
+        int ind = str.indexOf(ENC_PREFFIX);
+        if (ind < 0 || !str.endsWith(ENC_SUFFFIX)) {
+            return str; // not encoded
+        }
+
+        // identify encoded part
+        String encoded = str.substring(ind + ENC_PREFFIX.length(),
+                str.length() - ENC_SUFFFIX.length());
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(str.substring(0, ind));
+
+        // emulate StringTokenizer(encoded, ENC_SEPARATOR) to find tokens
+        int begin = 0;
+        int end = encoded.indexOf(ENC_SEPARATOR);
+        while (end >= 0) {
+            sb.append(decodeChar(encoded.substring(begin, end)));
+            begin = end + ENC_SEPARATOR.length();
+            end = encoded.indexOf(ENC_SEPARATOR, begin);
+        }
+        sb.append(encoded.substring(begin));
+
+        return sb.toString();
+    }
+
+    //----------Data members----------------------------------------------------
+
+    private static String encodeChar(char c) {
+        return Integer.toString((int) c, 16);
+    }
+
+    private static char decodeChar(String s) {
+        return (char) Integer.parseInt(s, 16);
+    }
 }
