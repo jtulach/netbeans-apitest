@@ -358,8 +358,13 @@ public class ClasspathImpl implements Classpath {
     protected ClasspathEntry createPathEntry(ClasspathEntry previosEntry, String name) {
         // try to create directory
         Throwable t = null;
-
-        if (new File(name).isDirectory()) {
+        if (new File(name).getName().equals("modules") || name.endsWith(".jimage")) {
+            try {
+                return new JimageJakeEntry(previosEntry, name);
+            } catch (Throwable th) {
+                t = th;
+            }
+        } else if (new File(name).isDirectory()) {
             try {
                 Class c = Class.forName(DIRECTORY_ENTRY_IMPL);
                 Constructor ctor = c.getConstructor(new Class[]{ClasspathEntry.class, String.class});
@@ -369,7 +374,6 @@ public class ClasspathImpl implements Classpath {
             } catch (Throwable th) {
                 t = th;
             }
-
         } else {
             // try to create JarFile entry
             try {
