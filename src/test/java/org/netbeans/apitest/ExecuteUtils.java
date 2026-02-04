@@ -24,17 +24,21 @@
  */
 package org.netbeans.apitest;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.PrintStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
 import junit.framework.AssertionFailedError;
+import org.apache.tools.ant.taskdefs.optional.junit.JUnitTest;
 import org.junit.Assert;
 
 /**
@@ -44,6 +48,8 @@ import org.junit.Assert;
 final class ExecuteUtils {
     private static ByteArrayOutputStream out;
     private static ByteArrayOutputStream err;
+    private static PrintStream printOut;
+    private static PrintStream printErr;
 
     private ExecuteUtils() {
     }
@@ -56,17 +62,24 @@ final class ExecuteUtils {
     }
 
     final static void execute(File f, String[] args) throws Exception {
+        URL loc = org.apache.tools.ant.Main.class.getProtectionDomain().getCodeSource().getLocation();
+        Path antJar = Paths.get(loc.toURI());
+        loc = org.apache.tools.ant.launch.AntMain.class.getProtectionDomain().getCodeSource().getLocation();
+        Path antLaunchJar = Paths.get(loc.toURI());
+        loc = JUnitTest.class.getProtectionDomain().getCodeSource().getLocation();
+        Path antJunitJar = Paths.get(loc.toURI());
+        loc = Sigtest.class.getProtectionDomain().getCodeSource().getLocation();
+        Path sigTestJar = Paths.get(loc.toURI());
+        Optional<String> javaCommandOpt = ProcessHandle.current().info().command();
+
+
         // we need security manager to prevent System.exit
-        if (! (System.getSecurityManager () instanceof MySecMan)) {
+        if (out == null) {
             out = new java.io.ByteArrayOutputStream ();
             err = new java.io.ByteArrayOutputStream ();
-            System.setOut (new java.io.PrintStream (out));
-            System.setErr (new java.io.PrintStream (err));
-
-            System.setSecurityManager (new MySecMan ());
+            printOut = new java.io.PrintStream (out);
+            printErr = new java.io.PrintStream (err);
         }
-
-        MySecMan sec = (MySecMan)System.getSecurityManager();
 
         // Jesse claims that this is not the right way how the execution
         // of an ant script should be invoked:
@@ -83,25 +96,52 @@ final class ExecuteUtils {
         // needs that...
 
         List<String> arr = new ArrayList<>();
+        arr.add(javaCommandOpt.get());
+        arr.add("-cp");
+        String ps = System.getProperty("path.separator");
+        arr.add(antJar + ps + antLaunchJar + ps + antJunitJar + ps + sigTestJar);
+        arr.add("org.apache.tools.ant.Main");
         arr.add ("-f");
-        arr.add (f.toString ());
+        arr.add (f.toString());
         arr.addAll(Arrays.asList(args));
         arr.add ("-verbose");
         if (System.getProperty("java.version").startsWith("1.8")) {
             arr.add ("-Dbuild.compiler=extjavac");
         }
 
-        out.reset ();
-        err.reset ();
+        out.reset();
+        err.reset();
+        ProcessBuilder pb = new ProcessBuilder(arr);
+        Process p = pb.start();
+        try (BufferedReader rOut = new BufferedReader(
+                new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8)); BufferedReader rErr = new BufferedReader(
+                new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8))) {
+            boolean endReached;
+            do {
+                endReached = true;
+                String line;
+                if ((line = rOut.readLine()) != null) {
+                    printOut.println(line);
+                    endReached = false;
+                }
+                if ((line = rErr.readLine()) != null) {
+                    printErr.println(line);
+                    endReached = false;
+                }
+            } while (!endReached);
+        }
 
-        try {
-            sec.setActive(true);
-            org.apache.tools.ant.Main.main (arr.toArray(new String[0]));
-        } catch (MySecExc ex) {
-            Assert.assertNotNull ("The only one to throw security exception is MySecMan and should set exitCode", sec.exitCode);
-            ExecutionError.assertExitCode ("Execution has to finish without problems", sec.exitCode);
-        } finally {
-            sec.setActive(false);
+        if (!p.waitFor(30, TimeUnit.SECONDS)) {
+            p.destroyForcibly();
+            throw new ExecutionError("Process timed out", -1);
+        }
+
+        int exit = p.exitValue();
+        ExecutionError.assertExitCode ("Execution has to finish without problems", exit);
+        if (err.toString().contains("java.lang.ClassFormatError") || out.toString().contains("java.lang.ClassFormatError")) {
+            System.err.println(out.toString());
+            System.err.println(err.toString());
+            throw new AssertionError("Class format error detected");
         }
     }
 
