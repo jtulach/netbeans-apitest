@@ -11,8 +11,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        java: [ '8', '11', '17', '21' ]
+        java: [ '11', '17', '21' ]
         os: [ ubuntu-22.04 ]
 
     steps:
