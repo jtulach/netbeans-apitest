@@ -492,6 +492,36 @@ public class CheckNewSigtestTest extends NbTestCase {
         }
     }
 
+    public void testTypeAnnotation() throws Exception {
+        String i1 =
+            "package libka;" +
+            "@java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE_PARAMETER)" +
+            "public @interface Anno {" +
+            "}";
+        String c1 =
+            "package ahoj;" +
+            "public abstract class Clz<@libka.Anno T> extends java.lang.ref.WeakReference<T> {" +
+            "  public Clz() { super(null); }" +
+            "  public abstract T get();" +
+            "}";
+        String c2 =
+            "package ahoj;" +
+            "public abstract class Clz<@libka.Anno T> extends java.lang.ref.WeakReference<T> {" +
+            "  public Clz() { super(null); }" +
+            "  public T get() { return null; }" +
+            "}";
+        createFile(1, "Anno.java", i1);
+        createFile(1, "Clz.java", c1);
+        createFile(2, "Anno.java", i1);
+        createFile(2, "Clz.java", c2);
+        compareAPIs(1, 2, "-Dcheck.package=ahoj.*");
+
+        int err = ExecuteUtils.getStdErr().indexOf("ClassFormatError");
+        assertEquals("No index out of bounds reading @Anno T:\n" + ExecuteUtils.getStdErr(), -1, err);
+        int out = ExecuteUtils.getStdOut().indexOf("ClassFormatError");
+        assertEquals("No index out of bounds reading @Anno T:\n" + ExecuteUtils.getStdOut(), -1, out);
+    }
+
     protected final void createFile(int slot, String name, String content) throws Exception {
         File d1 = new File(getWorkDir(), "dir" + slot);
         File c1 = new File(d1, name);
