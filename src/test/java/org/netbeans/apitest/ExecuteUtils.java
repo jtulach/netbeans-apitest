@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import junit.framework.AssertionFailedError;
+import org.apache.tools.ant.Main;
 import org.junit.Assert;
 
 /**
@@ -56,17 +57,16 @@ final class ExecuteUtils {
     }
 
     final static void execute(File f, String[] args) throws Exception {
-        // we need security manager to prevent System.exit
-        if (! (System.getSecurityManager () instanceof MySecMan)) {
+        if (out == null) {
             out = new java.io.ByteArrayOutputStream ();
-            err = new java.io.ByteArrayOutputStream ();
             System.setOut (new java.io.PrintStream (out));
+        }
+        if (err == null) {
+            err = new java.io.ByteArrayOutputStream ();
             System.setErr (new java.io.PrintStream (err));
-
-            System.setSecurityManager (new MySecMan ());
         }
 
-        MySecMan sec = (MySecMan)System.getSecurityManager();
+        SecureAntMain sec = new SecureAntMain();
 
         // Jesse claims that this is not the right way how the execution
         // of an ant script should be invoked:
@@ -96,11 +96,12 @@ final class ExecuteUtils {
 
         try {
             sec.setActive(true);
-            org.apache.tools.ant.Main.main (arr.toArray(new String[0]));
-        } catch (MySecExc ex) {
+            sec.startAnt(arr.toArray(new String[0]), null, null);
+        } catch (SecureExitException ex) {
             Assert.assertNotNull ("The only one to throw security exception is MySecMan and should set exitCode", sec.exitCode);
             ExecutionError.assertExitCode ("Execution has to finish without problems", sec.exitCode);
         } finally {
+            System.err.println("OVER!");
             sec.setActive(false);
         }
     }
@@ -128,7 +129,7 @@ final class ExecuteUtils {
         }
     }
 
-    private static class MySecExc extends SecurityException {
+    private static class SecureExitException extends SecurityException {
         @Override
         public void printStackTrace() {
         }
@@ -140,146 +141,21 @@ final class ExecuteUtils {
         }
     }
 
-    private static class MySecMan extends SecurityManager {
+    private static class SecureAntMain extends Main {
         public Integer exitCode;
 
         private boolean active;
 
         @Override
-        public void checkExit (int status) {
+        protected void exit(int status) {
             if (active) {
                 exitCode = status;
-                throw new MySecExc ();
+                throw new SecureExitException ();
             }
-        }
-
-        @Override
-        public void checkPermission(Permission perm, Object context) {
-        }
-
-        @Override
-        public void checkPermission(Permission perm) {
-        /*
-            if (perm instanceof RuntimePermission) {
-                if (perm.getName ().equals ("setIO")) {
-                    throw new MySecExc ();
-                }
-            }
-         */
-        }
-
-        @Override
-        public void checkMulticast(InetAddress maddr) {
-        }
-
-        @Override
-        public void checkAccess (ThreadGroup g) {
-        }
-
-        @Override
-        public void checkWrite (String file) {
-        }
-
-        @Override
-        public void checkLink (String lib) {
-        }
-
-        @Override
-        public void checkExec (String cmd) {
-        }
-
-        @Override
-        public void checkDelete (String file) {
-        }
-
-        @Override
-        public void checkPackageAccess (String pkg) {
-        }
-
-        @Override
-        public void checkPackageDefinition (String pkg) {
-        }
-
-        @Override
-        public void checkPropertyAccess (String key) {
-        }
-
-        @Override
-        public void checkRead (String file) {
-        }
-
-        @Override
-        public void checkSecurityAccess (String target) {
-        }
-
-        @Override
-        public void checkWrite(FileDescriptor fd) {
-        }
-
-        @Override
-        public void checkListen (int port) {
-        }
-
-        @Override
-        public void checkRead(FileDescriptor fd) {
-        }
-
-        @Override
-        @SuppressWarnings("deprecation")
-        public void checkMulticast(InetAddress maddr, byte ttl) {
-        }
-
-        @Override
-        public void checkAccess (Thread t) {
-        }
-
-        @Override
-        public void checkConnect (String host, int port, Object context) {
-        }
-
-        @Override
-        public void checkRead (String file, Object context) {
-        }
-
-        @Override
-        public void checkConnect (String host, int port) {
-        }
-
-        @Override
-        public void checkAccept (String host, int port) {
-        }
-
-        @SuppressWarnings("deprecation")
-        public void checkMemberAccess (Class clazz, int which) {
-        }
-
-        @SuppressWarnings("deprecation")
-        public void checkSystemClipboardAccess () {
-        }
-
-        @Override
-        public void checkSetFactory () {
-        }
-
-        @Override
-        public void checkCreateClassLoader () {
-        }
-
-        @SuppressWarnings("deprecation")
-        public void checkAwtEventQueueAccess () {
-        }
-
-        @Override
-        public void checkPrintJobAccess () {
-        }
-
-        @Override
-        public void checkPropertiesAccess () {
         }
 
         void setActive(boolean b) {
             active = b;
         }
-    } // end of MySecMan
-
+    }
 }
