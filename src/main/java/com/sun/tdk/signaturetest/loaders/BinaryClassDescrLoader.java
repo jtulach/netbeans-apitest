@@ -982,7 +982,7 @@ public class BinaryClassDescrLoader implements ClassDescriptionLoader, LoadingHi
             boolean tracked = true;
             int m = is.readUnsignedShort();
             for (int l = 0; l < m; l++) {
-                AnnotationItemEx anno = (AnnotationItemEx) readAnnotation(c, target, true);
+                AnnotationItemEx anno = new AnnotationItemEx();
                 int target_type = is.readUnsignedByte();
 
                 anno.setTargetType(target_type);
