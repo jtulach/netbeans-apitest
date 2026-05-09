@@ -63,6 +63,49 @@ public class APITest extends NbTestCase {
         clearWorkDir();
     }
 
+    public void testWeakReference() throws Exception {
+        String c1 = """
+                package ahoj;
+
+                import java.lang.ref.ReferenceQueue;
+                import java.lang.ref.WeakReference;
+
+                public final class MyWeakReference<T> extends WeakReference<T> {
+
+                    public MyWeakReference(T t) {
+                        super(t);
+                    }
+
+                    public MyWeakReference(T referent, ReferenceQueue<? super T> q) {
+                        super(referent, q);
+                    }
+                }
+                """;
+        createFile(1, "MyWeakReference.java", c1);
+
+
+        String c2 = """
+                package ahoj;
+
+                import java.lang.ref.ReferenceQueue;
+                import java.lang.ref.WeakReference;
+
+                public final class MyWeakReference<T> extends WeakReference<T> {
+
+                    public MyWeakReference(T t) {
+                        super(t);
+                    }
+
+                    public MyWeakReference(T referent, ReferenceQueue<? super T> q) {
+                        super(referent, q);
+                    }
+                }
+                """;
+        createFile(2, "MyWeakReference.java", c2);
+
+        compareAPIs(1, 2, "-Dcheck.package=ahoj.*");
+    }
+
     public void testAddingObjectMethodToAnInterfaceIsOK() throws Exception {
         String c1 =
             "package ahoj;" +
