@@ -104,6 +104,11 @@ public class APITest extends NbTestCase {
         createFile(2, "MyWeakReference.java", c2);
 
         compareAPIs(1, 2, "-Dcheck.package=ahoj.*");
+
+        int err = ExecuteUtils.getStdErr().indexOf("ClassFormatError");
+        assertEquals("No index out of bounds reading @Anno T:\n" + ExecuteUtils.getStdErr(), -1, err);
+        int out = ExecuteUtils.getStdOut().indexOf("ClassFormatError");
+        assertEquals("No index out of bounds reading @Anno T:\n" + ExecuteUtils.getStdOut(), -1, out);
     }
 
     public void testAddingObjectMethodToAnInterfaceIsOK() throws Exception {
