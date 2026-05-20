@@ -1,3 +1,27 @@
+# Use the Fork!
+
+> [!IMPORTANT]  
+> The latest releases are provided by [Jakarta EE TCK Tools](https://github.com/eclipse-ee4j/jakartaee-tck-tools/tree/master/tools/sigtest). Use
+> ```xml
+> <dependency>
+>    <groupId>jakarta.tck</groupId>
+>    <artifactId>sigtest-maven-plugin</artifactId>
+> </dependency>
+> ```
+
+There haven't been new releases for a while and meanwhile the active [SigTest](https://github.com/jtulach/netbeans-apitest) users set a fork up.
+[According to @scottmarlow](https://github.com/eclipse-ee4j/jakartaee-tck-tools/pull/18#issuecomment-4490703395)
+the latest fork of [SigTest](https://github.com/jtulach/netbeans-apitest) code is
+at [jakartaee-tck-tools](https://github.com/eclipse-ee4j/jakartaee-tck-tools/tree/master/tools/sigtest).
+Let's refocus around the https://github.com/eclipse-ee4j/jakartaee-tck-tools/tree/master/tools/sigtest then!
+
+> [!NOTE]
+> Another reason for switching the Maven co-ordinates is licensing.
+> [NetBeans](http://netbeans.org) project had been [donated to ASF](https://netbeans.apache.org/front/main/blogs/entry/1-5-m-lines-of/)
+> and changed its license to Apache. Continuing to release GPLv2 code of [SigTest](https://github.com/jtulach/netbeans-apitest) under the
+> `org.netbeans.tools` namespace would be confusing. When changing the group ID, `jakarta.tck` is a decent option for
+> this [little utility](https://github.com/jtulach/netbeans-apitest) of mine!
+
 # SigTest
 
 *SigTest* is the tool for checking incompatibilities between different versions of the same API. 
@@ -21,9 +45,8 @@ e.g. the signature file. Just add following into your own `pom.xml` file:
 
 ```xml
 <plugin>
-  <groupId>org.netbeans.tools</groupId>
+  <groupId>jakarta.tck</groupId> <!-- formerly <groupId>org.netbeans.tools</groupId> -->
   <artifactId>sigtest-maven-plugin</artifactId>
-  <version>1.5</version>
   <executions>
     <execution>
       <goals>
@@ -55,9 +78,8 @@ Try the following:
 
 ```xml
 <plugin>
-  <groupId>org.netbeans.tools</groupId>
+  <groupId>jakarta.tck</groupId> <!-- formerly <groupId>org.netbeans.tools</groupId> -->
   <artifactId>sigtest-maven-plugin</artifactId>
-  <version>1.5</version>
   <executions>
     <execution>
       <goals>
